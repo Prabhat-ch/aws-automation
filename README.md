@@ -1,2 +1,3 @@
 # aws-automation
-Using python for automating aws.
+
+Using python for automating AWS. * This is for practice only*
