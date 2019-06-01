@@ -1,6 +1,8 @@
 import boto3
 import click
 from botocore.exceptions import ClientError
+from pathlib import Path
+import mimetypes
 
 session = boto3.Session(profile_name='pythonAutomation')
 s3 = session.resource('s3')
@@ -29,10 +31,10 @@ def setup_bucket(bucket):
     s3_bucket = None
     try:
         s3_bucket = s3.create_bucket(
-            Bucket=bucket,
-            CreateBucketConfiguration={'LocationConstraint': session.region_name}
+            Bucket=bucket
+            # CreateBucketConfiguration={'LocationConstraint': session.region_name}
         )
-    except botocore.exceptions.ClientError as e:
+    except ClientError as e:
         if e.response['Error']['Code'] == 'BucketAlreadyOwnedByYou':
             s3_bucket = s3.Bucket(bucket)
         else:
@@ -76,6 +78,35 @@ def setup_bucket(bucket):
     )
 
     return
+
+
+def upload_file(s3_bucket, path, key):
+    content_type = mimetypes.guess_type(key)[0] or 'text/plain'
+    s3_bucket.upload_file(
+        path,
+        key,
+        ExtraArgs={
+            'ContentType': 'text/html'
+        }
+    )
+
+@cli.command('sync')
+@click.argument('pathname', type=click.Path(exists=True))
+@click.argument('bucket')
+def sync(pathname, bucket):
+    "Sync contents of pathname to bucket"
+
+    s3_bucket = s3.Bucket(bucket)
+
+    root = Path(pathname).expanduser().resolve()
+
+    def handle_directory(target):
+         for i in target.iterdir():
+             if i.is_dir(): handle_directory(i)
+             if i.is_file(): upload_file(s3_bucket, str(i), str(i.relative_to(root)))
+
+    handle_directory(root)
+
 
 
 if __name__ == '__main__':
