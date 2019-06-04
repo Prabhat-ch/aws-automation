@@ -21,8 +21,7 @@ bucket_manager = None
 
 
 @click.group()
-@click.option('--profile', default=None,
-    help='Use a given AWS profile.')
+@click.option('--profile', default=None, help='Use a given AWS profile.')
 def cli(profile):
     """Webotron deploys website to aws"""
 
